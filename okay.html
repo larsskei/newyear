@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bezzerwizzer Timeline</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .score {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        .current-card {
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            width: 200px;
+            margin: 0 auto 20px;
+            text-align: center;
+            cursor: move;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .timeline {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-height: 100px;
+            padding: 20px;
+        }
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 200px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .year {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .drop-zone {
+            width: 10px;
+            height: 100px;
+            background-color: #ddd;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+        .drop-zone.active {
+            background-color: #90caf9;
+        }
+        .win-message {
+            color: #4caf50;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Bezzerwizzer Timeline</h1>
+        <div class="score">Poeng: <span id="score">0</span> / 10</div>
+    </div>
+    <div id="current-card" class="current-card" draggable="true"></div>
+    <div id="timeline" class="timeline"></div>
+
+    <script>
+        const historicalEvents = [
+            { event: "Den første månelanding", year: 1969 },
+            { event: "Berlinmurens fall", year: 1989 },
+            { event: "Titanic synker", year: 1912 },
+            { event: "Andre verdenskrig slutter", year: 1945 },
+            { event: "Den franske revolusjon", year: 1789 },
+            { event: "Amerikas oppdagelse", year: 1492 },
+            { event: "Den industrielle revolusjon starter", year: 1760 },
+            { event: "Det første mennesket i verdensrommet", year: 1961 },
+            { event: "Første iPhone lanseres", year: 2007 },
+            { event: "Internett blir offentlig tilgjengelig", year: 1991 },
+            { event: "Facebook grunnlegges", year: 2004 },
+            { event: "Den kalde krigen slutter", year: 1991 }
+        ];
+
+        let cards = [];
+        let currentCard = null;
+        let score = 0;
+
+        function playSuccessSound() {
+            const audio = new Audio("data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2ORaIQwEMAJiDg95G4nQL7mQVWI6GwRcfsZAcsKkJvxgxEjzFUgfHoSQ9Qq7KNwqHwuB13MA4a1q/DmBrHgPcmjiGoh//EwC5nGPEmS4RcfkVKOhJf+WOgoxJclFz3kgn//dBA+ya1GhurNn8zb//9NNutNuhz31f////9vt///z+IdAEAAAK4LQIAKobHItEIYCGAExBwe8jcToF9zIKrEdDYIuP2MgOWFSE34wYiR5iqQPj0JIeoVdlG4VD4XA67mAcNa1fhzA1jwHuTRxDUQ//iYBczjHiTJcIuPyKlHQkv/LHQUYkuSi57yQT//uggfZNajQ3Vmz+Zt//+mm3Wm3Q576v////+32///5/EOgAAADVghQAAAAA");
+            audio.play();
+        }
+
+        function updateUI() {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            
+            // Add drop zones and cards
+            cards.forEach((card, index) => {
+                const dropZone = createDropZone(index);
+                timeline.appendChild(dropZone);
+                
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.innerHTML = `
+                    ${card.event}
+                    <div class="year">${card.year}</div>
+                `;
+                timeline.appendChild(cardElement);
+            });
+            
+            // Add final drop zone
+            timeline.appendChild(createDropZone(cards.length));
+
+            // Update current card
+            const currentCardElement = document.getElementById('current-card');
+            if (currentCard) {
+                currentCardElement.textContent = currentCard.event;
+                currentCardElement.style.display = 'block';
+            } else {
+                currentCardElement.style.display = 'none';
+            }
+
+            // Update score
+            document.getElementById('score').textContent = score;
+
+            if (score >= 9) {
+                const winMessage = document.createElement('div');
+                winMessage.className = 'win-message';
+                winMessage.textContent = 'Gratulerer, du vant!';
+                document.body.appendChild(winMessage);
+            }
+        }
+
+        function createDropZone(position) {
+            const dropZone = document.createElement('div');
+            dropZone.className = 'drop-zone';
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('active');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('active');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('active');
+                handleDrop(position);
+            });
+            return dropZone;
+        }
+
+        function handleDrop(position) {
+            if (!currentCard) return;
+
+            const isCorrect = position === 0 ? 
+                currentCard.year < cards[0].year :
+                position === cards.length ?
+                currentCard.year > cards[cards.length - 1].year :
+                currentCard.year > cards[position - 1].year && currentCard.year < cards[position].year;
+
+            if (isCorrect) {
+                playSuccessSound();
+                cards.splice(position, 0, currentCard);
+                score++;
+                
+                if (score >= 9) {
+                    currentCard = null;
+                } else {
+                    currentCard = getNextCard();
+                }
+            } else {
+                currentCard = getNextCard();
+            }
+            
+            updateUI();
+        }
+
+        function getNextCard() {
+            const usedEvents = new Set(cards.map(c => c.event));
+            const availableEvents = historicalEvents.filter(e => !usedEvents.has(e.event));
+            return availableEvents[Math.floor(Math.random() * availableEvents.length)];
+        }
+
+        // Initialize game
+        function initGame() {
+            const startingEvent = historicalEvents[Math.floor(Math.random() * historicalEvents.length)];
+            cards = [startingEvent];
+            currentCard = getNextCard();
+            score = 0;
+            updateUI();
+        }
+
+        // Setup drag and drop
+        const currentCardElement = document.getElementById('current-card');
+        currentCardElement.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', '');
+        });
+
+        initGame();
+    </script>
+</body>
+</html>
